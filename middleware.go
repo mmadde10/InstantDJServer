@@ -21,8 +21,8 @@ var stateToken, err = generateRandomString(32)
 
 const redirectURI = "http://localhost:8080/api/callback"
 
-var clientID = os.Getenv("clientID")
-var secretKey = os.Getenv("secretKey")
+var clientID = os.Getenv("spotifyClientID")
+var secretKey = os.Getenv("spotifySecretKey")
 
 var (
 	auth  = spotify.NewAuthenticator(redirectURI, spotify.ScopeUserReadEmail)

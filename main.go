@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -15,12 +16,13 @@ var mongoClient *mongo.Client
 
 func main() {
 
+	var dbURI = os.Getenv("dbURI")
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	clientOptions := options.Client().ApplyURI("")
+	clientOptions := options.Client().ApplyURI(dbURI)
 	mongoClient, err = mongo.Connect(ctx, clientOptions)
 
 	if err != nil {
-		log.Fatal("Cannot connext")
+		log.Fatal("Cannot connect")
 	}
 
 	r := router()
