@@ -22,7 +22,7 @@ func router() *mux.Router {
 	// Create Queue
 	router.HandleFunc("/api/queue", createQueue).Methods("POST", "OPTIONS")
 	router.HandleFunc("/api/queue/{id}", getQueue).Methods("GET", "OPTIONS")
-	//TODO: router.HandleFunc("/api/queue/{id}", updateQueue).Methods("POST", "OPTIONS")
+	router.HandleFunc("/api/queue/{id}", updateQueue).Methods("POST", "OPTIONS")
 
 	return router
 }

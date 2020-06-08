@@ -19,6 +19,7 @@ import (
 
 var stateToken, err = generateRandomString(32)
 
+//TODO: change dep on env, check if null
 const redirectURI = "http://localhost:8080/api/callback"
 
 var clientID = os.Getenv("spotifyClientID")
@@ -59,7 +60,6 @@ func validateUser(token string) (bool, interface{}, error) {
 
 // AuthenticateUser oauth endpoint
 func authenticateUser(w http.ResponseWriter, r *http.Request) {
-	println("auth user")
 	auth.SetAuthInfo(clientID, secretKey)
 	url := auth.AuthURL(state)
 	fmt.Println("Please log in to Spotify by visiting the following page in your browser:", url)
@@ -90,24 +90,6 @@ func authenticateUser(w http.ResponseWriter, r *http.Request) {
 	if error != nil {
 		log.Fatal(error)
 	}
-
-	/**
-	 * OAuth Strategy Overview
-	 *
-	 * - User is already logged in.
-	 *   - Check if there is an existing account with a provider id.
-	 *     - If there is, return an error message. (Account merging not supported)
-	 *     - Else link new OAuth account with currently logged-in user.
-	 * - User is not logged in.
-	 *   - Check if it's a returning user.
-	 *     - If returning user, sign in and we are done.
-	 *     - Else check if there is an existing account with user's email.
-	 *       - If there is, return an error message.
-	 *       - Else create a new account.
-	 */
-
-	println(AuthUser.Email)
-
 	AuthInfo := User{
 		SpotifyID:    user.ID,
 		Name:         user.DisplayName,
@@ -172,6 +154,7 @@ func getTrack(w http.ResponseWriter, r *http.Request) {
 	if resp.StatusCode == 401 {
 		w.WriteHeader(http.StatusUnauthorized)
 		w.Write([]byte("401 - Unauthorized"))
+		return
 	}
 	if resp.StatusCode == 400 {
 		w.WriteHeader(http.StatusBadRequest)
@@ -238,14 +221,13 @@ func createQueue(w http.ResponseWriter, r *http.Request) {
 	if error != nil || !isAuth {
 		w.WriteHeader(http.StatusUnauthorized)
 		w.Write([]byte("401 - Unauthorized"))
+		return
 	}
 
 	var f interface{}
 	decoder := json.NewDecoder(r.Body)
 
 	err := decoder.Decode(&f)
-
-	println("F Print")
 
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -268,12 +250,11 @@ func createQueue(w http.ResponseWriter, r *http.Request) {
 	if error2 != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("400 - Bad Request"))
+	} else {
+		// Return confirmation of queue with queue id
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		json.NewEncoder(w).Encode(queueCode)
 	}
-
-	// Return confirmation of queue with queue id
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	json.NewEncoder(w).Encode(queueCode)
-
 }
 
 func getQueue(w http.ResponseWriter, r *http.Request) {
@@ -283,6 +264,7 @@ func getQueue(w http.ResponseWriter, r *http.Request) {
 	if error != nil || !isAuth {
 		w.WriteHeader(http.StatusUnauthorized)
 		w.Write([]byte("401 - Unauthorized"))
+		return
 	}
 
 	params := mux.Vars(r)
@@ -304,13 +286,62 @@ func getQueue(w http.ResponseWriter, r *http.Request) {
 	decodeError := collection.FindOne(ctx, filter).Decode(&f)
 
 	if decodeError != nil {
-		print(decodeError)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("400 - Bad Request"))
+	} else {
+		// Return confirmation of queue with queue id
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		json.NewEncoder(w).Encode(f)
 	}
 
-	// Return confirmation of queue with queue id
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	json.NewEncoder(w).Encode(f)
+}
 
+func updateQueue(w http.ResponseWriter, r *http.Request) {
+	tok := r.Header["Authorization"][0]
+	isAuth, _, error := validateUser(tok)
+
+	if error != nil || !isAuth {
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte("401 - Unauthorized"))
+		return
+	}
+
+	params := mux.Vars(r)
+	id := params["id"]
+
+	var track Track
+	decoder := json.NewDecoder(r.Body)
+
+	err := decoder.Decode(&track)
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("400 - Bad Request1"))
+	}
+	filter := bson.D{{
+		"RoomCode",
+		bson.D{{
+			"$in",
+			bson.A{id},
+		}},
+	}}
+	update := bson.M{
+		"$push": bson.M{"Track": track},
+	}
+
+	var f interface{}
+
+	db := mongoClient.Database("instant_dj_dev")
+	collection := db.Collection("queues")
+	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
+	decodeError := collection.FindOneAndUpdate(ctx, filter, update).Decode(&f)
+
+	if decodeError != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("400 - Bad Request2"))
+	} else {
+		// Return confirmation of queue with queue id
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		json.NewEncoder(w).Encode(f)
+	}
 }
