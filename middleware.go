@@ -20,8 +20,7 @@ import (
 var stateToken, err = generateRandomString(32)
 
 //TODO: change dep on env, check if null
-const redirectURI = "http://localhost:8080/api/callback"
-
+var redirectURI = os.Getenv("redirectURI")
 var clientID = os.Getenv("spotifyClientID")
 var secretKey = os.Getenv("spotifySecretKey")
 
@@ -56,6 +55,15 @@ func validateUser(token string) (bool, interface{}, error) {
 	}
 
 	return false, nil, nil
+}
+
+func info(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	CurrentAppInfo := AppInfo{
+		Name:    "InstantDJServer",
+		Version: "0.1.0",
+	}
+	json.NewEncoder(w).Encode(CurrentAppInfo)
 }
 
 // AuthenticateUser oauth endpoint
@@ -231,7 +239,7 @@ func createQueue(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("400 - Bad Request"))
+		w.Write([]byte("400 - Bad Request1"))
 	}
 
 	var tracks []Track
@@ -248,8 +256,9 @@ func createQueue(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if error2 != nil {
+		log.Fatal(error2)
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("400 - Bad Request"))
+		w.Write([]byte("400 - Bad Request2"))
 	} else {
 		// Return confirmation of queue with queue id
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")

@@ -71,3 +71,8 @@ type SearchResult struct {
 	artists []Artist
 	tracks  []Item
 }
+
+type AppInfo struct {
+	Name    string `json: "name"`
+	Version string `json: "version"`
+}

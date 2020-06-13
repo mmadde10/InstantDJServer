@@ -9,6 +9,8 @@ func router() *mux.Router {
 
 	router := mux.NewRouter()
 
+	router.HandleFunc("/api/info", info).Methods("GET", "OPTIONS")
+
 	router.HandleFunc("/api/autenticate", authenticateUser).Methods("GET", "OPTIONS")
 	router.HandleFunc("/api/callback", completeAuth).Methods("GET", "OPTIONS")
 
